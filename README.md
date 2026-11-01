@@ -78,8 +78,7 @@ The vertex stage is a single triangle generated from `gl_VertexID`, so there are
 ## Known limits
 
 - One pass per scene. There is no framebuffer chain, so bloom and blur are approximated inside each scene.
-- The raymarcher and fractal are heavy at 4K on integrated GPUs. Shrink the window or lower `MAX_STEPS`.
-- Tested on Linux with an NVIDIA GPU. macOS needs `-clibs "-framework OpenGL"` and has not been tried.
+- Tested on Linux with Mesa on an Intel GPU. macOS needs `-clibs "-framework OpenGL"` and has not been tried.
 
 ## Credits
 

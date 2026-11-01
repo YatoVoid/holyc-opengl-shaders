@@ -34,6 +34,7 @@ class Scene
 {
   U8 *name;
   U8 *source;
+  U8 *rejected;
   U32 program;
   I32 u_res, u_time, u_mouse;
   I64 checked_at;
@@ -92,12 +93,14 @@ U0 SceneWatch(Scene *s, I64 now)
     return;
   s->checked_at = now;
   U8 *src = LoadFragment(s->name);
-  if (src && StrCmp(src, s->source)) {
+  Bool changed = src && StrCmp(src, s->source) && (!s->rejected || StrCmp(src, s->rejected));
+  Free(src);
+  if (changed) {
     "reloading %s\n", s->name;
-    Free(src);
-    SceneLoad(s, s->name);
-  } else {
-    Free(src);
+    if (!SceneLoad(s, s->name)) {
+      Free(s->rejected);
+      s->rejected = LoadFragment(s->name);
+    }
   }
 }
 
