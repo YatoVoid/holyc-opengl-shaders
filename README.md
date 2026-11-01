@@ -2,12 +2,31 @@
 
 Real-time fragment shader scenes, driven by a small HolyC host program. HolyC opens the window, creates the OpenGL 3.3 context, compiles the shaders, feeds them uniforms and runs the frame loop. The pictures themselves are drawn on the GPU.
 
-| | |
-|---|---|
-| ![raymarch](docs/media/raymarch.gif) | ![fractal](docs/media/fractal.gif) |
-| **raymarch**: signed distance field scene with soft shadows, ambient occlusion and a mirror bounce. [mp4](docs/media/raymarch.mp4) | **fractal**: Mandelbulb with an animated power and orbit-trap colouring. [mp4](docs/media/fractal.mp4) |
-| ![particles](docs/media/particles.gif) | ![plasma](docs/media/plasma.gif) |
-| **particles**: 140 comets with analytic trails, additive glow and tone mapping. [mp4](docs/media/particles.mp4) | **plasma**: four summed sine fields mapped through a cosine palette. [mp4](docs/media/plasma.mp4) |
+## Scenes
+
+### raymarch
+
+![raymarch](docs/media/raymarch.gif)
+
+A signed distance field scene: a blended pair of spheres, a rotating torus and a box over a checkered floor. Soft shadows, ambient occlusion, rim light and one mirror bounce. [Full quality mp4](docs/media/raymarch.mp4)
+
+### fractal
+
+![fractal](docs/media/fractal.gif)
+
+A Mandelbulb whose power animates between 4 and 8. Colour comes from an orbit trap, and the background glow comes from how many steps each ray took. [Full quality mp4](docs/media/fractal.mp4)
+
+### particles
+
+![particles](docs/media/particles.gif)
+
+140 comets on tilted elliptical orbits. Each trail is a distance-to-segment function, the glow is additive, and a tone map keeps overlaps from clipping. Hold the mouse to pull them. [Full quality mp4](docs/media/particles.mp4)
+
+### plasma
+
+![plasma](docs/media/plasma.gif)
+
+Four summed sine fields pushed through a cosine palette. The smallest scene, and a good one to read first. [Full quality mp4](docs/media/plasma.mp4)
 
 ## Run it
 
