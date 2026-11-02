@@ -1,4 +1,4 @@
-# lumen
+# lumen: HolyC OpenGL shaders
 
 Real-time fragment shader scenes, driven by a small HolyC host program. HolyC opens the window, creates the OpenGL 3.3 context, compiles the shaders, feeds them uniforms, runs the frame loop and the post-processing chain. The pictures themselves are drawn on the GPU.
 
