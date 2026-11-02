@@ -185,3 +185,4 @@ Bool SdlKeyDown(I64 scancode)
 
 #define SC_1 30
 #define SC_R 21
+#define SC_B 5

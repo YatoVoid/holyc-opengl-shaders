@@ -156,3 +156,18 @@ U32 LinkProgram(U8 *vertex_src, U8 *fragment_src)
   return program;
 }
 
+
+#define GL_FRAMEBUFFER         0x8D40
+#define GL_COLOR_ATTACHMENT0   0x8CE0
+#define GL_FRAMEBUFFER_COMPLETE 0x8CD5
+#define GL_RGBA16F             0x881A
+#define GL_RGBA                0x1908
+#define GL_LINEAR              0x2601
+#define GL_TEXTURE0            0x84C0
+
+extern "c" U0 glGenFramebuffers(I32 n, U32 *ids);
+extern "c" U0 glBindFramebuffer(U32 target, U32 id);
+extern "c" U0 glDeleteFramebuffers(I32 n, U32 *ids);
+extern "c" U0 glFramebufferTexture2D(U32 target, U32 attachment, U32 textarget, U32 texture, I32 level);
+extern "c" U32 glCheckFramebufferStatus(U32 target);
+extern "c" U0 glActiveTexture(U32 unit);

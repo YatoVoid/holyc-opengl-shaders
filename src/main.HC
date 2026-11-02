@@ -2,9 +2,10 @@
 //
 //   hcc src/main.HC -o build/lumen
 //   ./build/lumen [scene]
-//   ./build/lumen --render <scene> <out-dir> <frames> <fps> <width> <height>
+//   ./build/lumen --render <scene> <out-dir> <frames> <fps> <width> <height> <bloom 0|1>
 //
-// Keys: 1-4 switch scene, R reload, Esc quit. Saving a scene file reloads it.
+// Keys: 1-4 switch scene, B toggle bloom, R reload, Esc quit.
+// Saving a scene file reloads it.
 
 #include "sdl2.HC"
 #include "gl.HC"
@@ -27,6 +28,8 @@ U8 *g_vertex_src =
   "  vec2 p = vec2((gl_VertexID << 1) & 2, gl_VertexID & 2);\n"
   "  gl_Position = vec4(p * 2.0 - 1.0, 0.0, 1.0);\n"
   "}\n";
+
+#include "post.HC"
 
 U8 *g_scenes[SCENE_COUNT] = {"raymarch", "particles", "fractal", "plasma"};
 
@@ -147,7 +150,14 @@ U0 *OpenWindow(I32 w, I32 h, Bool visible)
   return window;
 }
 
-I32 RenderToDisk(U8 *name, U8 *dir, I64 frames, I64 fps, I32 w, I32 h)
+U0 DrawScene(Scene *scene, Post *post, U32 vao, F64 t, I32 w, I32 h, F64 mx, F64 my, F64 click)
+{
+  glBindFramebuffer(GL_FRAMEBUFFER, post->scene.fbo);
+  SceneDraw(scene, vao, t, w, h, mx, my, click);
+  PostResolve(post, vao, w, h);
+}
+
+I32 RenderToDisk(U8 *name, U8 *dir, I64 frames, I64 fps, I32 w, I32 h, Bool bloom)
 {
   U0 *window = OpenWindow(w, h, FALSE);
   if (!window)
@@ -155,6 +165,9 @@ I32 RenderToDisk(U8 *name, U8 *dir, I64 frames, I64 fps, I32 w, I32 h)
 
   U32 vao;
   glGenVertexArrays(1, &vao);
+  Post post;
+  if (!PostInit(&post, bloom) || !PostResize(&post, w, h))
+    return 1;
   Scene scene;
   MemSet(&scene, 0, sizeof(Scene));
   if (!SceneLoad(&scene, name))
@@ -163,7 +176,7 @@ I32 RenderToDisk(U8 *name, U8 *dir, I64 frames, I64 fps, I32 w, I32 h)
   for (I64 i = 0; i < frames; i++) {
     F64 t = i;
     t /= fps;
-    SceneDraw(&scene, vao, t, w, h, 0.0, 0.0, 0.0);
+    DrawScene(&scene, &post, vao, t, w, h, 0.0, 0.0, 0.0);
     U8 *path = MStrPrint("%s/f%05d.ppm", dir, i);
     Bool ok = GlSavePpm(path, w, h);
     Free(path);
@@ -177,9 +190,9 @@ I32 RenderToDisk(U8 *name, U8 *dir, I64 frames, I64 fps, I32 w, I32 h)
 
 I32 Main(I32 argc, U8 **argv)
 {
-  if (argc >= 8 && !StrCmp(argv[1], "--render"))
+  if (argc >= 9 && !StrCmp(argv[1], "--render"))
     return RenderToDisk(argv[2], argv[3], atoi(argv[4]), atoi(argv[5]),
-                        atoi(argv[6]), atoi(argv[7]));
+                        atoi(argv[6]), atoi(argv[7]), atoi(argv[8]) != 0);
 
   U8 *first = g_scenes[0];
   if (argc > 1)
@@ -193,15 +206,23 @@ I32 Main(I32 argc, U8 **argv)
 
   U32 vao;
   glGenVertexArrays(1, &vao);
+  Post post;
+  if (!PostInit(&post, TRUE))
+    return 1;
   Scene scene;
   MemSet(&scene, 0, sizeof(Scene));
   if (!SceneLoad(&scene, first))
     return 1;
+  Bool b_was_down = FALSE;
 
   while (SdlPumpEvents() && !SdlKeyDown(SC_ESCAPE)) {
     for (I64 k = 0; k < SCENE_COUNT; k++)
       if (SdlKeyDown(SC_1 + k) && StrCmp(scene.name, g_scenes[k]))
         SceneLoad(&scene, g_scenes[k]);
+    Bool b_down = SdlKeyDown(SC_B);
+    if (b_down && !b_was_down)
+      post.bloom = !post.bloom;
+    b_was_down = b_down;
     if (SdlKeyDown(SC_R))
       SceneLoad(&scene, scene.name);
 
@@ -213,7 +234,8 @@ I32 Main(I32 argc, U8 **argv)
     U32 buttons = SDL_GetMouseState(&mx, &my);
     F64 t = now;
     t /= 1000.0;
-    SceneDraw(&scene, vao, t, w, h, mx, h - my, buttons & SDL_BUTTON_LMASK);
+    PostResize(&post, w, h);
+    DrawScene(&scene, &post, vao, t, w, h, mx, h - my, buttons & SDL_BUTTON_LMASK);
     SDL_GL_SwapWindow(window);
   }
 

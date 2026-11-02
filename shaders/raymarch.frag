@@ -28,7 +28,7 @@ mat2 rot(float a)
   return mat2(c, -s, s, c);
 }
 
-// x: distance, y: material id (0 floor, 1 blob, 2 torus, 3 box)
+// x: distance, y: material id (0 floor, 1 blob, 2 torus, 3 box, 4 emitter)
 vec2 map(vec3 p)
 {
   float t = iTime;
@@ -49,6 +49,14 @@ vec2 map(vec3 p)
   r.xz *= rot(t);
   float box = sdBox(r, vec3(0.32)) - 0.04;
   if (box < res.x) res = vec2(box, 3.0);
+
+  for (int i = 0; i < 2; i++) {
+    float f = float(i);
+    float a = t * (0.9 + 0.4 * f) + f * 3.14159;
+    vec3 c = vec3(cos(a) * (1.9 + 0.55 * f), 0.35 + 0.5 * sin(t * 1.7 + f * 2.0), sin(a) * (1.9 + 0.55 * f));
+    float orb = sdSphere(p - c, 0.2);
+    if (orb < res.x) res = vec2(orb, 4.0 + f * 0.1);
+  }
 
   return res;
 }
@@ -103,17 +111,22 @@ vec3 albedo(vec3 p, float id)
 {
   if (id < 0.5) {
     float check = mod(floor(p.x) + floor(p.z), 2.0);
-    return mix(vec3(0.07, 0.08, 0.1), vec3(0.2, 0.22, 0.26), check);
+    return mix(vec3(0.03, 0.035, 0.05), vec3(0.11, 0.12, 0.15), check);
   }
   if (id < 1.5) return vec3(0.95, 0.35, 0.25);
   if (id < 2.5) return vec3(0.9, 0.78, 0.4);
   return vec3(0.3, 0.6, 0.95);
 }
 
+vec3 emission(float id)
+{
+  return id < 4.05 ? vec3(7.0, 2.4, 0.9) : vec3(0.9, 2.8, 8.0);
+}
+
 vec3 sky(vec3 rd)
 {
-  vec3 top = vec3(0.04, 0.06, 0.12);
-  vec3 low = vec3(0.35, 0.28, 0.4);
+  vec3 top = vec3(0.01, 0.015, 0.04);
+  vec3 low = vec3(0.09, 0.07, 0.13);
   return mix(low, top, clamp(rd.y * 1.4 + 0.2, 0.0, 1.0));
 }
 
@@ -122,6 +135,7 @@ vec3 shade(vec3 ro, vec3 rd, vec2 hit, vec3 lightDir)
   if (hit.y < 0.0) return sky(rd);
   vec3 p = ro + rd * hit.x;
   vec3 n = normalAt(p);
+  if (hit.y > 3.5) return emission(hit.y);
   vec3 base = albedo(p, hit.y);
 
   float diff = max(dot(n, lightDir), 0.0);
@@ -132,7 +146,7 @@ vec3 shade(vec3 ro, vec3 rd, vec2 hit, vec3 lightDir)
   float spec = pow(max(dot(n, h), 0.0), 48.0);
 
   vec3 col = base * (vec3(1.0, 0.9, 0.75) * diff * sh * 1.5 + sky(n) * 0.6 * occ);
-  col += spec * sh * 0.8;
+  col += spec * sh * 2.4;
   col += rim * sky(reflect(rd, n)) * 0.5 * occ;
   return col;
 }
@@ -169,6 +183,5 @@ void mainImage(out vec4 c, in vec2 fc)
   col = mix(col, sky(rd), fog * step(0.0, hit.y));
 
   col *= 1.0 - 0.35 * dot(uv, uv);
-  col = pow(col, vec3(0.4545));
   c = vec4(col, 1.0);
 }

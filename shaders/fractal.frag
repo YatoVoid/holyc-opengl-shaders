@@ -72,12 +72,11 @@ void mainImage(out vec4 c, in vec2 fc)
     float diff = max(dot(n, l), 0.0);
     float occ = clamp(1.0 - glow * 1.4, 0.0, 1.0);
     float spec = pow(max(dot(reflect(-l, n), -rd), 0.0), 24.0);
-    col = base * (0.15 + 0.95 * diff) * (0.35 + 0.65 * occ) + spec * 0.4;
+    col = base * (0.15 + 0.95 * diff) * (0.35 + 0.65 * occ) + spec * 1.6;
   } else {
-    col += vec3(0.9, 0.45, 0.7) * pow(glow, 2.2) * 0.9;
+    col += vec3(0.9, 0.45, 0.7) * pow(glow, 2.2) * 2.6;
   }
 
   col *= 1.0 - 0.4 * dot(uv, uv);
-  col = pow(col, vec3(0.4545));
   c = vec4(col, 1.0);
 }

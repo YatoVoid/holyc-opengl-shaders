@@ -29,11 +29,9 @@ void mainImage(out vec4 c, in vec2 fc)
     float size = (0.0009 + 0.0012 * hash(id + 6.0)) * (1.0 - 0.5 * h);
     float glow = exp(-d * d / (size * size * 6.0)) * 2.2 * (1.0 - 0.9 * h) * (1.0 - 0.9 * h);
     vec3 tint = 0.55 + 0.45 * cos(6.2831 * (hash(id + 7.0) + vec3(0.0, 0.33, 0.67)));
-    col += mix(tint, vec3(1.0), 0.6 * glow) * glow;
+    col += mix(tint, vec3(1.0), 0.6 * glow) * glow * 2.2;
   }
 
-  col = 1.0 - exp(-col * 1.3);
   col *= 1.0 - 0.3 * dot(uv, uv);
-  col = pow(col, vec3(0.4545));
   c = vec4(col, 1.0);
 }

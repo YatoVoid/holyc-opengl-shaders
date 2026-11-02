@@ -1,6 +1,27 @@
 # lumen
 
-Real-time fragment shader scenes, driven by a small HolyC host program. HolyC opens the window, creates the OpenGL 3.3 context, compiles the shaders, feeds them uniforms and runs the frame loop. The pictures themselves are drawn on the GPU.
+Real-time fragment shader scenes, driven by a small HolyC host program. HolyC opens the window, creates the OpenGL 3.3 context, compiles the shaders, feeds them uniforms, runs the frame loop and the post-processing chain. The pictures themselves are drawn on the GPU.
+
+Scenes render in linear HDR into a floating point framebuffer. A two-pass separable bloom, tone mapping and gamma correction are applied afterwards.
+
+## Bloom
+
+![particles, bloom off and on](docs/media/particles-compare.gif)
+
+The divider sweeps across the frame: bloom off on the left, bloom on on the right. The other scenes: [raymarch](docs/media/raymarch-compare.gif), [fractal](docs/media/fractal-compare.gif), [plasma](docs/media/plasma-compare.gif). Full quality mp4: [particles](docs/media/particles-compare.mp4), [raymarch](docs/media/raymarch-compare.mp4), [fractal](docs/media/fractal-compare.mp4), [plasma](docs/media/plasma-compare.mp4).
+
+How it works, in the order the GPU runs it:
+
+1. **Scene pass.** The scene's fragment shader draws into an `RGBA16F` texture. Values above 1.0 are kept, so a light that is eight times brighter than white stays eight times brighter.
+2. **Bright pass.** The first blur pass reads the scene texture and keeps only what exceeds a threshold of 1.0, with a soft knee so the cutoff does not show as an edge.
+3. **Blur.** A 9-tap Gaussian, written as 5 bilinear taps, runs horizontally into one half-resolution texture, then vertically into a second. That pair runs 4 times, each round blurring the previous result, so the glow spreads wider than one kernel allows.
+4. **Composite.** The scene and the blurred texture are added, tone mapped with an ACES curve and gamma corrected into the window.
+
+Splitting a 2D Gaussian into a horizontal and a vertical pass turns `N x N` texture reads per pixel into `2N`. Working at half resolution cuts the cost by another factor of four, and the blur hides the lost detail.
+
+Without bloom, bright pixels clip to white and stop there. With it, they leak light into their neighbours, which is why the emitters in the raymarch scene and the comet heads read as hot rather than just white.
+
+The code is in `src/post.HC` and `shaders/post/`.
 
 ## Scenes
 
@@ -41,6 +62,7 @@ hcc src/main.HC -o build/lumen
 | Key | Action |
 |---|---|
 | 1 to 4 | switch scene |
+| B | toggle bloom |
 | R | reload the current scene |
 | Esc | quit |
 | Left mouse drag | orbit the camera (raymarch, fractal) or pull the particles (particles) |
@@ -51,7 +73,7 @@ The running scene's `.frag` file is re-read every 250 ms. Save it and the new ve
 
 ## Writing a scene
 
-A scene is one file in `shaders/` that defines `mainImage`:
+A scene is one file in `shaders/` that defines `mainImage`. Output linear HDR colour: do not apply gamma or tone mapping, the composite pass does that.
 
 ```glsl
 void mainImage(out vec4 c, in vec2 fc)
@@ -76,8 +98,9 @@ Compile error line numbers match the scene file, because the prelude ends with `
 The videos above are produced by the program itself, not by screen capture. `--render` draws frames into a hidden window at a fixed time step and writes them as PPM files:
 
 ```sh
-./build/lumen --render <scene> <out-dir> <frames> <fps> <width> <height>
-scripts/record.sh [scene...]     # renders, then encodes mp4 and gif with ffmpeg
+./build/lumen --render <scene> <out-dir> <frames> <fps> <width> <height> <bloom 0|1>
+scripts/record.sh [scene...]              # renders, then encodes mp4 and gif with ffmpeg
+scripts/record.sh --compare [scene...]    # bloom off and on with a sweeping divider
 ```
 
 Because time comes from the frame index, the output is the same on every run and does not depend on how fast the machine is.
@@ -86,9 +109,11 @@ Because time comes from the frame index, the output is the same on every run and
 
 ```
 src/main.HC       window, scene loading, hot reload, offline renderer
+src/post.HC       framebuffers, bloom passes and the final composite
 src/gl.HC         OpenGL 3.3 declarations and the shader compile/link helpers
 src/sdl2.HC       SDL2 declarations and input helpers
 shaders/*.frag    the scenes
+shaders/post/     blur and composite shaders
 scripts/record.sh frame render and video encode
 ```
 
@@ -96,7 +121,7 @@ The vertex stage is a single triangle generated from `gl_VertexID`, so there are
 
 ## Known limits
 
-- One pass per scene. There is no framebuffer chain, so bloom and blur are approximated inside each scene.
+- Bloom runs at half resolution with a fixed threshold, strength and round count (constants at the top of `src/post.HC`). They are not uniforms yet.
 - Tested on Linux with Mesa on an Intel GPU. macOS needs `-clibs "-framework OpenGL"` and has not been tried.
 
 ## Credits
